@@ -1,63 +1,51 @@
 Agent operating principles:
-- If you find that the appoach you're taking isn't working or is overcomplicated or is inappropriate, stop and think deep about the task you're trying to accomplish rather than immediately switching to a different approach.
-- If you're not confident about something (you're not sure you've understood what I've asked, or you're not confident it would work), stop and ask me about it. Correctness is more important than how fast you implement it.
-- When I ask you to do something, your first step should always be to formulate a plan with clear steps to reach the goal. Give me a short description of your plan and then get my confirmation before proceeding.
-  - Exception: Don't wait for confirmation for trivial fixes or changes that only affect things locally in 1-2 functions.
-- Start with a plan that does the bare minimum to accomplish what I've asked. For any good ideas you have beyond the basics, ask me before adding them to the plan.
-- If there's uncommitted work in the project (dirty git tree), confirm that I want you to make changes despite the uncommitted work before proceeding.
-- Maintain a CLAUDE.md file in every project. If one doesn't exist yet, create it.
-- Write good code, even if it takes longer or is more work. Correctness trumps coding speed.
-- When a test needs to be reworked due to changed functionality, first check that the test even makes sense or adds value anymore.
+- If an approach isn't working or feels overcomplicated, stop and rethink rather than immediately switching tactics.
+- When uncertain about requirements or viability, ask. Correctness over speed.
+- Always formulate a minimal plan and get confirmation before proceeding. Propose extras separately.
+- If there's uncommitted work in the project, ask before proceeding.
+- Maintain a CLAUDE.md file in every project root. Create one if it doesn't exist.
+- When reworking tests due to changed functionality, first check if the test still adds value.
 
-The principles of good code:
-- It should be easily comprehensible to someone unfamiliar with the codebase. Naming and comments should guide the reader along so that they're not confused as to why parts of the code exist (the principle of least astonishment).
-- Follow the best practices and idioms of the language/technology you're using.
-- The choice of algorithm and architecture usually has a much bigger impact on performance than localized optimizations. Focus on the former, and avoid localized optimizations unless I ask for them.
-- Keep the CLAUDE.md file in each project up to date as the project evolves.
-- YAGNI: Don't add things that might be needed in future; focus on things that are actually needed now.
-  - There's always a tension between YAGNI and flexible architecture. Lean toward YAGNI (about 2/3), but allow some architectural flexibility (about 1/3). If you're unsure of how far to go on this, ask me.
-- All functionality requires tests that verify its proper operation.
-  - This applies to application logic. Scripts, utilities, and configuration code don't require tests unless I say otherwise.
-  - Architect in ways that make testing easier, but don't overcomplicate things.
-- In general, a simpler solution is better.
+Token efficiency:
+- Keep responses concise. Don't echo back file contents or restate what was just read.
+- Use targeted file reads (specify line ranges) for large files instead of reading the whole file.
+- Use the Explore subagent for broad codebase searches instead of multiple sequential Grep/Glob calls.
+- Prefer Edit over Write — rewriting whole files costs more tokens.
+- Don't re-read files already in the conversation context.
+- Batch independent tool calls in parallel.
+- Don't over-explain changes unless asked. A brief summary is sufficient.
+- Avoid speculative exploration. Don't read files "just in case" — only read what's needed for the current step.
+- When a project CLAUDE.md exists, trust it for project structure rather than re-exploring from scratch.
+- Don't duplicate global CLAUDE.md content in project CLAUDE.md files. The global file is always loaded; repeating it doubles the cost.
 
-The CLAUDE.md file in a project:
-- It should exist at the root of a project.
-- It should describe:
-  - How it's architectured and why.
-  - Any idiosyncrasies and how to deal with them.
-  - How the components of the project fit together.
-  - For each component:
-    - Why it exists.
-    - How it works.
-    - What its responsibilities are.
-  - Anything else that is important for an agent to know when working in this project.
-- Avoid code examples in general unless it's really necessary in order to understand how things work.
-- Whenever you gain new insights and understanding while working in a project, proactively update the CLAUDE.md file. I can edit it afterward if I don't like the change.
+Delegation:
+- After planning, delegate each implementation step to a Task subagent using model "sonnet" (or "haiku" for trivial steps like running builds/tests).
+- Plans passed to subagents must be self-contained: include exact file paths, what to change, and acceptance criteria.
+- Keep architectural decisions and complex debugging in the main agent.
+- For single small edits, just do it directly — don't spawn a subagent for trivial work.
+
+Good code:
+- Comprehensible to someone unfamiliar with the codebase (principle of least astonishment).
+- Follow language/technology best practices and idioms.
+- Focus on algorithm and architecture over localized optimizations unless asked.
+- Keep project CLAUDE.md files up to date as the project evolves.
+- YAGNI: Only build what's needed now. Ask if unsure about the YAGNI/flexibility tradeoff.
+- All functionality requires tests. Architect for testability without overcomplicating.
+- Simpler solutions are better.
+
+CLAUDE.md in a project:
+- Describe: architecture and rationale, idiosyncrasies, how components fit together, each component's purpose/mechanics/responsibilities.
+- Avoid code examples unless essential for understanding.
+- Update with new insights gained while working.
 
 Naming:
-- Use names that enhance readability. High quality names reduce the need for comments.
-- A class or struct name should help describe what its purpose is.
-- A function or method name should describe what it does or describe the question it answers.
-- A member name should fit its purpose in the class or struct.
-- An instance name should describe its purpose in the algorithm.
-- An iterator's name should start with the letter "i", followed by what it's iterating over (using camel or snake case depending on the coding standard).
-  - Exception: Use the established pattern for a particular language if one exists (e.g. Python's `for item in items:`).
-- In general, names should describe "what", not "how" (otherwise you'd have to change the name whenever you changed how something worked).
-  - The only exception to this is if you have a specialization of a more general concept where the "how" is important to understand the specialization.
+- Names should enhance readability and describe "what", not "how" (exception: specializations where "how" distinguishes them).
+- Classes/structs: describe purpose. Functions/methods: describe action or question answered.
+- Members: fit purpose in containing type. Instances: describe purpose in algorithm.
+- Iterators: prefix with "i" + what's iterated (camelCase or snake_case per convention).
 
 Comments:
-- Comments should be reserved for places where the implementation must be done in a non-obvious way (principle of least astonishment).
-- Comments in an algorithm should focus on the "why" rather than the "how". A comment is a signal of intent so that when someone debugs the code, they know what you intended to accomplish.
-- If the algorithm itself is complicated, then a comment describing how it works is appropriate.
-- Do not include code examples in comments. They fall out-of-date too quickly.
-- Comments must be checked regularly to ensure that they don't fall out of date with the code.
-- Don't record history in the comments; that's what source code management software is for.
-  - The only exception is for unusual code that is needed for historical reasons.
-- If comments exist in the code already, assume that they might be important.
-  - If you don't understand why a comment is there and it's close to the code you are changing, ask about it.
-  - Do not remove existing comments without my approval.
-- Every source file should have a comment at or near the top (after any boilerplate header comment) that describes what its purpose is.
-  - Exception: If it's already obvious from the context what a file is for (e.g. configuration files, test files), it doesn't need ABOUTME comments.
-  - Each line of this comment should begin with "ABOUTME: " so that it can be grepped.
-  - Keep these comment lines within 80 characters so that source code formatters don't break them.
+- Reserve for non-obvious implementations. Focus on "why" over "how" (except for complex algorithms).
+- No code examples in comments. No history (use VCS). Keep comments current.
+- Don't remove existing comments without approval. If unclear why one exists, ask.
+- Every source file needs a purpose comment near the top, each line prefixed "ABOUTME: " (keep within 80 chars).
